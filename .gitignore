@@ -1,0 +1,23 @@
+# IntelliJ
+.idea/
+*.iml
+
+# Maven
+target/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool
+build/
+
+# Environment
+.env
