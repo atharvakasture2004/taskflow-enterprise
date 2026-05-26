@@ -46,7 +46,7 @@ public class ProjectController {
 
     @PostMapping("/{projectId}/tasks")
     public Task createTask(
-            @PathVariable UUID projectId,
+            @PathVariable @NonNull UUID projectId,
             @Valid
             @RequestBody CreateTaskRequest request) {
 
@@ -58,7 +58,7 @@ public class ProjectController {
 
     @GetMapping("/{projectId}/tasks")
     public List<Task> getTasks(
-            @PathVariable UUID projectId) {
+            @PathVariable @NonNull UUID projectId) {
 
         return service.getTasks(projectId);
     }
