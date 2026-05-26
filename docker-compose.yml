@@ -41,6 +41,37 @@ services:
     networks:
       - taskflow-network
 
+  gateway-service:
+    build:
+      context: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    networks:
+      - taskflow-network
+
+  user-service:
+    build:
+      context: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres-user
+    networks:
+      - taskflow-network
+
+  project-service:
+    build:
+      context: ./project-service
+    container_name: project-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres-project
+    networks:
+      - taskflow-network
+
 volumes:
   postgres-user-data:
   postgres-project-data:
