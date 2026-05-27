@@ -1,0 +1,13 @@
+entity user {}
+
+entity project {
+
+    relation admin @user
+    relation member @user
+
+    permission view = admin or member
+
+    permission create_task = admin or member
+
+    permission delete_task = admin
+}
