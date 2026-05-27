@@ -1,7 +1,7 @@
 {
   "$id": "https://taskflow.local/identity.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "TaskFlow User",
+  "title": "TaskFlow Identity",
   "type": "object",
   "properties": {
     "traits": {
@@ -9,13 +9,22 @@
       "properties": {
         "email": {
           "type": "string",
-          "format": "email"
+          "format": "email",
+          "ory.sh/kratos": {
+            "credentials": {
+              "password": {
+                "identifier": true
+              }
+            }
+          }
         },
         "name": {
           "type": "string"
         }
       },
-      "required": ["email"],
+      "required": [
+        "email"
+      ],
       "additionalProperties": false
     }
   }
