@@ -1,5 +1,6 @@
 package com.taskflow.gateway_service.filter;
 
+import com.taskflow.gateway_service.security.HydraIntrospectionService;
 import com.taskflow.gateway_service.security.JwtUtil;
 
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -15,15 +16,17 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
-public class JwtGatewayFilter
-        implements GlobalFilter, Ordered {
+public class JwtGatewayFilter implements GlobalFilter, Ordered {
 
     private final JwtUtil jwtUtil;
+    private final HydraIntrospectionService hydraService;
 
     public JwtGatewayFilter(
-            JwtUtil jwtUtil) {
+            JwtUtil jwtUtil,
+            HydraIntrospectionService hydraService) {
 
         this.jwtUtil = jwtUtil;
+        this.hydraService = hydraService;
     }
 
     @Override
@@ -32,8 +35,7 @@ public class JwtGatewayFilter
             GatewayFilterChain chain) {
 
         String path =
-                exchange
-                        .getRequest()
+                exchange.getRequest()
                         .getURI()
                         .getPath();
 
@@ -42,34 +44,39 @@ public class JwtGatewayFilter
         }
 
         String authHeader =
-                exchange
-                        .getRequest()
+                exchange.getRequest()
                         .getHeaders()
                         .getFirst("Authorization");
 
         if (authHeader == null
                 || !authHeader.startsWith("Bearer ")) {
 
-            exchange
-                    .getResponse()
+            exchange.getResponse()
                     .setStatusCode(HttpStatus.UNAUTHORIZED);
 
-            return exchange
-                    .getResponse()
+            return exchange.getResponse()
                     .setComplete();
         }
 
-        String token =
-                authHeader.substring(7);
+        String token = authHeader.substring(7);
 
-        if (!jwtUtil.isValid(token)) {
+        boolean validLocalJwt =
+                jwtUtil.isValid(token);
 
-            exchange
-                    .getResponse()
+        boolean validHydraToken =
+                false;
+
+        if (!validLocalJwt) {
+            validHydraToken =
+                    hydraService.isActive(token);
+        }
+
+        if (!validLocalJwt && !validHydraToken) {
+
+            exchange.getResponse()
                     .setStatusCode(HttpStatus.UNAUTHORIZED);
 
-            return exchange
-                    .getResponse()
+            return exchange.getResponse()
                     .setComplete();
         }
 
