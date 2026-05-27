@@ -15,7 +15,7 @@ public class PermifyService {
             "http://permify:3476/v1/tenants/default/permissions/check";
 
     private static final String SCHEMA_VERSION =
-            "d8b80o1v848s73c90c50";
+            "d8bclmneivec73fvrev0";
 
     public boolean canViewProject(
             String userId,
