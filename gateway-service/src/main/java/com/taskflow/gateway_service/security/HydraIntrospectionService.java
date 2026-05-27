@@ -9,20 +9,30 @@ import java.util.Map;
 @Service
 public class HydraIntrospectionService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate =
+            new RestTemplate();
 
     private static final String INTROSPECT_URL =
             "http://hydra:4445/oauth2/introspect";
 
-    public boolean isActive(String token) {
+    public Map<String, Object> introspect(
+            String token) {
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpHeaders headers =
+                new HttpHeaders();
 
-        String body = "token=" + token;
+        headers.setContentType(
+                MediaType.APPLICATION_FORM_URLENCODED
+        );
+
+        String body =
+                "token=" + token;
 
         HttpEntity<String> request =
-                new HttpEntity<>(body, headers);
+                new HttpEntity<>(
+                        body,
+                        headers
+                );
 
         ResponseEntity<Map> response =
                 restTemplate.postForEntity(
@@ -31,11 +41,18 @@ public class HydraIntrospectionService {
                         Map.class
                 );
 
-        if (response.getBody() == null) {
+        return response.getBody();
+    }
+
+    public boolean isActive(
+            Map<String, Object> response) {
+
+        if (response == null) {
             return false;
         }
 
-        Object active = response.getBody().get("active");
+        Object active =
+                response.get("active");
 
         return Boolean.TRUE.equals(active);
     }

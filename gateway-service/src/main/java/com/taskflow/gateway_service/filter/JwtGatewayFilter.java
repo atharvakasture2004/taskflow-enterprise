@@ -15,76 +15,104 @@ import org.springframework.web.server.ServerWebExchange;
 
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @Component
-public class JwtGatewayFilter implements GlobalFilter, Ordered {
+public class JwtGatewayFilter
+                implements GlobalFilter, Ordered {
 
-    private final JwtUtil jwtUtil;
-    private final HydraIntrospectionService hydraService;
+        private final JwtUtil jwtUtil;
+        private final HydraIntrospectionService hydraService;
 
-    public JwtGatewayFilter(
-            JwtUtil jwtUtil,
-            HydraIntrospectionService hydraService) {
+        public JwtGatewayFilter(
+                        JwtUtil jwtUtil,
+                        HydraIntrospectionService hydraService) {
 
-        this.jwtUtil = jwtUtil;
-        this.hydraService = hydraService;
-    }
-
-    @Override
-    public Mono<Void> filter(
-            ServerWebExchange exchange,
-            GatewayFilterChain chain) {
-
-        String path =
-                exchange.getRequest()
-                        .getURI()
-                        .getPath();
-
-        if (path.startsWith("/auth")) {
-            return chain.filter(exchange);
+                this.jwtUtil = jwtUtil;
+                this.hydraService = hydraService;
         }
 
-        String authHeader =
-                exchange.getRequest()
-                        .getHeaders()
-                        .getFirst("Authorization");
+        @Override
+        public Mono<Void> filter(
+                        ServerWebExchange exchange,
+                        GatewayFilterChain chain) {
 
-        if (authHeader == null
-                || !authHeader.startsWith("Bearer ")) {
+                String path = exchange.getRequest()
+                                .getURI()
+                                .getPath();
 
-            exchange.getResponse()
-                    .setStatusCode(HttpStatus.UNAUTHORIZED);
+                if (path.startsWith("/auth")) {
+                        return chain.filter(exchange);
+                }
 
-            return exchange.getResponse()
-                    .setComplete();
+                String authHeader = exchange.getRequest()
+                                .getHeaders()
+                                .getFirst("Authorization");
+
+                if (authHeader == null
+                                || !authHeader.startsWith("Bearer ")) {
+
+                        exchange.getResponse()
+                                        .setStatusCode(HttpStatus.UNAUTHORIZED);
+
+                        return exchange.getResponse()
+                                        .setComplete();
+                }
+
+                String token = authHeader.substring(7);
+
+                if (jwtUtil.isValid(token)) {
+
+                        String subject = jwtUtil.extractSubject(token);
+
+                        String authSource = "local-jwt";
+
+                        ServerWebExchange mutatedExchange = exchange.mutate()
+                                        .request(builder -> builder
+                                                        .header(
+                                                                        "X-Authenticated-User",
+                                                                        subject)
+                                                        .header(
+                                                                        "X-Auth-Source",
+                                                                        authSource))
+                                        .build();
+
+                        return chain.filter(mutatedExchange);
+
+                } else {
+
+                        Map<String, Object> introspection = hydraService.introspect(token);
+
+                        if (!hydraService.isActive(introspection)) {
+
+                                exchange.getResponse()
+                                                .setStatusCode(HttpStatus.UNAUTHORIZED);
+
+                                return exchange.getResponse()
+                                                .setComplete();
+                        }
+
+                        String subject = String.valueOf(
+                                        introspection.get("sub"));
+
+                        String authSource = "hydra";
+
+                        ServerWebExchange mutatedExchange = exchange.mutate()
+                                        .request(builder -> builder
+                                                        .header(
+                                                                        "X-Authenticated-User",
+                                                                        subject)
+                                                        .header(
+                                                                        "X-Auth-Source",
+                                                                        authSource))
+                                        .build();
+
+                        return chain.filter(mutatedExchange);
+                }
         }
 
-        String token = authHeader.substring(7);
-
-        boolean validLocalJwt =
-                jwtUtil.isValid(token);
-
-        boolean validHydraToken =
-                false;
-
-        if (!validLocalJwt) {
-            validHydraToken =
-                    hydraService.isActive(token);
+        @Override
+        public int getOrder() {
+                return -1;
         }
-
-        if (!validLocalJwt && !validHydraToken) {
-
-            exchange.getResponse()
-                    .setStatusCode(HttpStatus.UNAUTHORIZED);
-
-            return exchange.getResponse()
-                    .setComplete();
-        }
-
-        return chain.filter(exchange);
-    }
-
-    @Override
-    public int getOrder() {
-        return -1;
-    }
 }
