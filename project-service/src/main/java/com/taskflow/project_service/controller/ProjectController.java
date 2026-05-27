@@ -5,9 +5,11 @@ import com.taskflow.project_service.dto.CreateTaskRequest;
 import com.taskflow.project_service.model.Project;
 import com.taskflow.project_service.model.Task;
 import com.taskflow.project_service.service.ProjectService;
+
 import jakarta.validation.Valid;
 
 import org.springframework.lang.NonNull;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +21,9 @@ public class ProjectController {
 
     private final ProjectService service;
 
-    public ProjectController(ProjectService service) {
+    public ProjectController(
+            ProjectService service) {
+
         this.service = service;
     }
 
@@ -28,7 +32,9 @@ public class ProjectController {
             @Valid
             @RequestBody CreateProjectRequest request) {
 
-        return service.createProject(request);
+        return service.createProject(
+                request
+        );
     }
 
     @GetMapping
@@ -39,27 +45,37 @@ public class ProjectController {
 
     @GetMapping("/{projectId}")
     public Project getProjectById(
-            @PathVariable @NonNull UUID projectId) {
+            @PathVariable @NonNull UUID projectId,
+            Authentication authentication) {
 
-        return service.getProjectById(projectId);
+        return service.getProjectById(
+                projectId,
+                authentication.getName()
+        );
     }
 
     @PostMapping("/{projectId}/tasks")
     public Task createTask(
             @PathVariable @NonNull UUID projectId,
             @Valid
-            @RequestBody CreateTaskRequest request) {
+            @RequestBody CreateTaskRequest request,
+            Authentication authentication) {
 
         return service.createTask(
                 projectId,
-                request
+                request,
+                authentication.getName()
         );
     }
 
     @GetMapping("/{projectId}/tasks")
     public List<Task> getTasks(
-            @PathVariable @NonNull UUID projectId) {
+            @PathVariable @NonNull UUID projectId,
+            Authentication authentication) {
 
-        return service.getTasks(projectId);
+        return service.getTasks(
+                projectId,
+                authentication.getName()
+        );
     }
 }

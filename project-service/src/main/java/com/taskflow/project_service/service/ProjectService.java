@@ -5,10 +5,12 @@ import com.taskflow.project_service.dto.CreateProjectRequest;
 import com.taskflow.project_service.dto.CreateTaskRequest;
 import com.taskflow.project_service.model.Project;
 import com.taskflow.project_service.model.Task;
+import com.taskflow.project_service.permify.PermifyService;
 import com.taskflow.project_service.repository.ProjectRepository;
 import com.taskflow.project_service.repository.TaskRepository;
 
 import org.springframework.lang.NonNull;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,28 +22,28 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final UserClient userClient;
+    private final PermifyService permifyService;
 
     public ProjectService(
             ProjectRepository projectRepository,
             TaskRepository taskRepository,
-            UserClient userClient) {
+            UserClient userClient,
+            PermifyService permifyService) {
 
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.userClient = userClient;
+        this.permifyService = permifyService;
     }
 
     public Project createProject(
             CreateProjectRequest request) {
 
         try {
-
             userClient.getUser(
                     request.getOwnerId()
             );
-
         } catch (Exception e) {
-
             throw new RuntimeException(
                     "Owner user not found"
             );
@@ -68,21 +70,38 @@ public class ProjectService {
     }
 
     public Project getProjectById(
-            @NonNull UUID projectId) {
+            @NonNull     UUID projectId,
+            String currentUserId) {
 
-        return projectRepository.findById(
-                        projectId
-                )
-                .orElseThrow(
-                        () -> new RuntimeException(
-                                "Project not found"
+        Project project =
+                projectRepository.findById(
+                                projectId
                         )
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Project not found"
+                                )
+                        );
+
+        boolean allowed =
+                permifyService.canViewProject(
+                        currentUserId,
+                        projectId.toString()
                 );
+
+        if (!allowed) {
+            throw new AccessDeniedException(
+                    "You are not allowed to view this project"
+            );
+        }
+
+        return project;
     }
 
     public Task createTask(
-            @NonNull UUID projectId,
-            CreateTaskRequest request) {
+            @NonNull     UUID projectId,
+            CreateTaskRequest request,
+            String currentUserId) {
 
         projectRepository.findById(
                         projectId
@@ -92,6 +111,18 @@ public class ProjectService {
                                 "Project not found"
                         )
                 );
+
+        boolean allowed =
+                permifyService.canCreateTask(
+                        currentUserId,
+                        projectId.toString()
+                );
+
+        if (!allowed) {
+            throw new AccessDeniedException(
+                    "You are not allowed to create task in this project"
+            );
+        }
 
         Task task = new Task();
 
@@ -109,7 +140,8 @@ public class ProjectService {
     }
 
     public List<Task> getTasks(
-            @NonNull UUID projectId) {
+            @NonNull     UUID projectId,
+            String currentUserId) {
 
         projectRepository.findById(
                         projectId
@@ -119,6 +151,18 @@ public class ProjectService {
                                 "Project not found"
                         )
                 );
+
+        boolean allowed =
+                permifyService.canViewProject(
+                        currentUserId,
+                        projectId.toString()
+                );
+
+        if (!allowed) {
+            throw new AccessDeniedException(
+                    "You are not allowed to view tasks"
+            );
+        }
 
         return taskRepository.findByProjectId(
                 projectId
