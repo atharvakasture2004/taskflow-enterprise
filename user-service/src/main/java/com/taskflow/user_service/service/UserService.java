@@ -14,27 +14,60 @@ import java.util.UUID;
 public class UserService {
 
     private final UserProfileRepository repository;
+    private final KratosService kratosService;
 
-    public UserService(UserProfileRepository repository) {
+    public UserService(
+            UserProfileRepository repository,
+            KratosService kratosService) {
+
         this.repository = repository;
+        this.kratosService = kratosService;
     }
 
-    public UserProfile create(CreateUserRequest request) {
+    public UserProfile create(
+            CreateUserRequest request) {
 
-        UserProfile user = new UserProfile();
+        String kratosId =
+                kratosService.createIdentity(
+                        request.getEmail(),
+                        request.getName()
+                );
 
-        user.setEmail(request.getEmail());
-        user.setName(request.getName());
+        UserProfile user =
+                new UserProfile();
 
-        return repository.save(user);
+        user.setKratosId(
+                kratosId
+        );
+
+        user.setEmail(
+                request.getEmail()
+        );
+
+        user.setName(
+                request.getName()
+        );
+
+        return repository.save(
+                user
+        );
     }
 
     public List<UserProfile> getAll() {
+
         return repository.findAll();
     }
 
-    public UserProfile getById(@NonNull UUID id) {
-        return repository.findById(id)
-                .orElseThrow();
+    public UserProfile getById(
+            @NonNull UUID id) {
+
+        return repository.findById(
+                        id
+                )
+                .orElseThrow(
+                        () -> new RuntimeException(
+                                "User not found"
+                        )
+                );
     }
 }
