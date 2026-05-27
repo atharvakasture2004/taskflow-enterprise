@@ -4,12 +4,13 @@ import com.taskflow.project_service.dto.CreateProjectRequest;
 import com.taskflow.project_service.dto.CreateTaskRequest;
 import com.taskflow.project_service.model.Project;
 import com.taskflow.project_service.model.Task;
+import com.taskflow.project_service.security.AuthUtil;
 import com.taskflow.project_service.service.ProjectService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.lang.NonNull;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,11 +21,14 @@ import java.util.UUID;
 public class ProjectController {
 
     private final ProjectService service;
+    private final AuthUtil authUtil;
 
     public ProjectController(
-            ProjectService service) {
+            ProjectService service,
+            AuthUtil authUtil) {
 
         this.service = service;
+        this.authUtil = authUtil;
     }
 
     @PostMapping
@@ -32,9 +36,7 @@ public class ProjectController {
             @Valid
             @RequestBody CreateProjectRequest request) {
 
-        return service.createProject(
-                request
-        );
+        return service.createProject(request);
     }
 
     @GetMapping
@@ -46,11 +48,14 @@ public class ProjectController {
     @GetMapping("/{projectId}")
     public Project getProjectById(
             @PathVariable @NonNull UUID projectId,
-            Authentication authentication) {
+            HttpServletRequest request) {
+
+        String userId =
+                authUtil.getAuthenticatedUser(request);
 
         return service.getProjectById(
                 projectId,
-                authentication.getName()
+                userId
         );
     }
 
@@ -59,23 +64,29 @@ public class ProjectController {
             @PathVariable @NonNull UUID projectId,
             @Valid
             @RequestBody CreateTaskRequest request,
-            Authentication authentication) {
+            HttpServletRequest httpRequest) {
+
+        String userId =
+                authUtil.getAuthenticatedUser(httpRequest);
 
         return service.createTask(
                 projectId,
                 request,
-                authentication.getName()
+                userId
         );
     }
 
     @GetMapping("/{projectId}/tasks")
     public List<Task> getTasks(
             @PathVariable @NonNull UUID projectId,
-            Authentication authentication) {
+            HttpServletRequest request) {
+
+        String userId =
+                authUtil.getAuthenticatedUser(request);
 
         return service.getTasks(
                 projectId,
-                authentication.getName()
+                userId
         );
     }
 }

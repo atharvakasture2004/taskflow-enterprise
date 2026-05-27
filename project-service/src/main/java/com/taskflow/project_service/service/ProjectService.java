@@ -5,6 +5,7 @@ import com.taskflow.project_service.dto.CreateProjectRequest;
 import com.taskflow.project_service.dto.CreateTaskRequest;
 import com.taskflow.project_service.model.Project;
 import com.taskflow.project_service.model.Task;
+import com.taskflow.project_service.model.TaskStatus;
 import com.taskflow.project_service.permify.PermifyService;
 import com.taskflow.project_service.repository.ProjectRepository;
 import com.taskflow.project_service.repository.TaskRepository;
@@ -40,16 +41,20 @@ public class ProjectService {
             CreateProjectRequest request) {
 
         try {
+
             userClient.getUser(
                     request.getOwnerId()
             );
+
         } catch (Exception e) {
+
             throw new RuntimeException(
                     "Owner user not found"
             );
         }
 
-        Project project = new Project();
+        Project project =
+                new Project();
 
         project.setName(
                 request.getName()
@@ -71,7 +76,7 @@ public class ProjectService {
 
     public Project getProjectById(
             @NonNull     UUID projectId,
-            String currentUserId) {
+            String userId) {
 
         Project project =
                 projectRepository.findById(
@@ -83,13 +88,21 @@ public class ProjectService {
                                 )
                         );
 
+        if (userId == null || userId.isBlank()) {
+
+            throw new AccessDeniedException(
+                    "Missing authenticated user"
+            );
+        }
+
         boolean allowed =
                 permifyService.canViewProject(
-                        currentUserId,
+                        userId,
                         projectId.toString()
                 );
 
         if (!allowed) {
+
             throw new AccessDeniedException(
                     "You are not allowed to view this project"
             );
@@ -101,7 +114,7 @@ public class ProjectService {
     public Task createTask(
             @NonNull     UUID projectId,
             CreateTaskRequest request,
-            String currentUserId) {
+            String userId) {
 
         projectRepository.findById(
                         projectId
@@ -112,19 +125,28 @@ public class ProjectService {
                         )
                 );
 
+        if (userId == null || userId.isBlank()) {
+
+            throw new AccessDeniedException(
+                    "Missing authenticated user"
+            );
+        }
+
         boolean allowed =
                 permifyService.canCreateTask(
-                        currentUserId,
+                        userId,
                         projectId.toString()
                 );
 
         if (!allowed) {
+
             throw new AccessDeniedException(
-                    "You are not allowed to create task in this project"
+                    "You are not allowed to create tasks in this project"
             );
         }
 
-        Task task = new Task();
+        Task task =
+                new Task();
 
         task.setProjectId(
                 projectId
@@ -134,6 +156,10 @@ public class ProjectService {
                 request.getTitle()
         );
 
+        task.setStatus(
+                TaskStatus.TODO
+        );
+
         return taskRepository.save(
                 task
         );
@@ -141,7 +167,7 @@ public class ProjectService {
 
     public List<Task> getTasks(
             @NonNull     UUID projectId,
-            String currentUserId) {
+            String userId) {
 
         projectRepository.findById(
                         projectId
@@ -152,13 +178,21 @@ public class ProjectService {
                         )
                 );
 
+        if (userId == null || userId.isBlank()) {
+
+            throw new AccessDeniedException(
+                    "Missing authenticated user"
+            );
+        }
+
         boolean allowed =
                 permifyService.canViewProject(
-                        currentUserId,
+                        userId,
                         projectId.toString()
                 );
 
         if (!allowed) {
+
             throw new AccessDeniedException(
                     "You are not allowed to view tasks"
             );
