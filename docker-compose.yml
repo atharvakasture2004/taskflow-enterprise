@@ -1,6 +1,89 @@
 version: "3.9"
 
 services:
+  postgres-kratos:
+    image: postgres:16
+    container_name: postgres-kratos
+    restart: always
+    environment:
+      POSTGRES_DB: kratos
+      POSTGRES_USER: kratos
+      POSTGRES_PASSWORD: kratos
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-kratos-data:/var/lib/postgresql/data
+    networks:
+      - taskflow-network
+
+  postgres-hydra:
+    image: postgres:16
+    container_name: postgres-hydra
+    restart: always
+    environment:
+      POSTGRES_DB: hydra
+      POSTGRES_USER: hydra
+      POSTGRES_PASSWORD: hydra
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-hydra-data:/var/lib/postgresql/data
+    networks:
+      - taskflow-network
+
+  kratos-migrate:
+    image: oryd/kratos:latest
+    container_name: kratos-migrate
+    command: migrate sql -e --yes
+    environment:
+      DSN: postgres://kratos:kratos@postgres-kratos:5432/kratos?sslmode=disable
+    volumes:
+      - ./kratos:/etc/config/kratos
+    depends_on:
+      - postgres-kratos
+    networks:
+      - taskflow-network
+
+  kratos:
+    image: oryd/kratos:latest
+    container_name: kratos
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    ports:
+      - "4433:4433"
+      - "4434:4434"
+    volumes:
+      - ./kratos:/etc/config/kratos
+    depends_on:
+      - kratos-migrate
+    networks:
+      - taskflow-network
+
+  hydra-migrate:
+    image: oryd/hydra:latest
+    container_name: hydra-migrate
+    command: migrate sql -e --yes
+    environment:
+      DSN: postgres://hydra:hydra@postgres-hydra:5432/hydra?sslmode=disable
+    volumes:
+      - ./hydra:/etc/config/hydra
+    depends_on:
+      - postgres-hydra
+    networks:
+      - taskflow-network
+
+  hydra:
+    image: oryd/hydra:latest
+    container_name: hydra
+    command: serve all --dev -c /etc/config/hydra/hydra.yml
+    ports:
+      - "4444:4444"
+      - "4445:4445"
+    volumes:
+      - ./hydra:/etc/config/hydra
+    depends_on:
+      - hydra-migrate
+    networks:
+      - taskflow-network
 
   postgres-user:
     image: postgres:16
@@ -75,6 +158,8 @@ services:
 volumes:
   postgres-user-data:
   postgres-project-data:
+  postgres-kratos-data:
+  postgres-hydra-data:
 
 networks:
   taskflow-network:
